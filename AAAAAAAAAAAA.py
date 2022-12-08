@@ -3,6 +3,12 @@ import flatdict
 import re
 import os.path
 
+key_env =  'resource_registry.*'
+key_words = '(.*get_file$|resources.*type$)'
+h_f = '^heat_template_version'
+
+list_of_files = []
+
 def norm_path(path_global, file_path):
     ret = ''
     re_match1 = re.match('^../', file_path)
@@ -25,18 +31,7 @@ def norm_path(path_global, file_path):
 
     return ret      
 
-key_env =  'resource_registry.*'
-key_words = '(.*get_file$|resources.*type$)'
-
-list_of_files = []
-
-def env_files(env_file):
-    with open(env_file, 'r') as fd2:
-        env = yaml.load(fd2, Loader=yaml.Loader)
-
-    env_path = os.path.split(env_file)
-    dict_env = flatdict.FlatDict(env, delimiter=' - ')
-
+def env_files_helper(dict_env, env_path):
     for key, value in dict_env.items():
         re_match = re.match(key_env, key)
         if re_match and isinstance(value, str):
@@ -44,16 +39,30 @@ def env_files(env_file):
             if os.path.isfile(absvalue):
                 list_of_files.append(absvalue)
 
-def heat_files(heat_file):
-    with open(heat_file, 'r') as fd:
-        heat = yaml.load(fd, Loader=yaml.Loader)
-
-    heat_path = os.path.split(heat_file)
-    dict_heat = flatdict.FlatDict(heat, delimiter=' - ')
-    
+def heat_files_helper(dict_heat, heat_path):
     for key, value in dict_heat.items():
         re_match = re.match(key_words, key)
         if re_match and isinstance(value, str):
             absvalue = norm_path(heat_path[0], value) 
             if os.path.isfile(absvalue):
                 list_of_files.append(absvalue)  
+                
+def heat_or_env(eh_file):
+    with open(eh_file, 'r') as fd:
+        eh = yaml.load(fd, Loader=yaml.Loader)
+
+    eh_path = os.path.split(eh_file)
+
+    if isinstance(eh, dict):
+        eh_dict = flatdict.FlatDict(eh, delimiter=' - ')
+        for key, value in eh_dict.items():
+            is_heat = re.match(h_f, key)
+            if is_heat:
+                heat_files_helper(eh_dict, eh_path)
+                break
+        else:
+            env_files_helper(eh_dict, eh_path)
+    else:
+        for d in eh:
+            eh_dict = flatdict.FlatDict(d, delimiter=' - ')
+            env_files_helper(eh_dict, eh_path)   
