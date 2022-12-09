@@ -45,7 +45,7 @@ def env_files_helper(dict_env, env_path):
             if re_match and isinstance(value, str):
                 absvalue = os.path.join(env_path[0], value)
                 if os.path.isfile(absvalue):
-                    list_of_files.append(absvalue) 
+                    list_of_files.append({key: absvalue}) 
 
 def heat_files_helper(dict_heat, heat_path):
     for key, value in dict_heat.items():
