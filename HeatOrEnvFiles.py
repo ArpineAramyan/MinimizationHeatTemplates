@@ -34,11 +34,18 @@ def norm_path(path_global, file_path):
 
 def env_files_helper(dict_env, env_path):
     for key, value in dict_env.items():
-        re_match = re.match(key_env, key)
-        if re_match and isinstance(value, str):
-            absvalue = os.path.join(env_path[0], value)
-            if os.path.isfile(absvalue):
-                list_of_files.append(absvalue)
+        if key == 'environments':
+            for i in value:
+                if i.get('path'):
+                    absvalue = os.path.join(env_path[0], i.get('path'))
+                    if os.path.isfile(absvalue):
+                        list_of_files.append(absvalue)
+        else:
+            re_match = re.match(key_env, key)
+            if re_match and isinstance(value, str):
+                absvalue = os.path.join(env_path[0], value)
+                if os.path.isfile(absvalue):
+                    list_of_files.append(absvalue) 
 
 def heat_files_helper(dict_heat, heat_path):
     for key, value in dict_heat.items():
