@@ -8,7 +8,7 @@ key_words = '(.*get_file$|resources.*type$)'
 h_f = '^heat_template_version'
 y_f = '.*yaml$'
 
-list_of_files = []
+list_of_files = [{}]
 
 def norm_path(path_global, file_path):
     ret = ''
@@ -45,7 +45,7 @@ def env_files_helper(dict_env, env_path):
             if re_match and isinstance(value, str):
                 absvalue = os.path.join(env_path[0], value)
                 if os.path.isfile(absvalue):
-                    list_of_files.append({key: absvalue}) 
+                    list_of_files[0].update({key: absvalue}) 
 
 def heat_files_helper(dict_heat, heat_path):
     for key, value in dict_heat.items():
