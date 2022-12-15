@@ -97,5 +97,5 @@ root_files = ['/home/amp/ankap/or_not/asperitas-heat-templates-1666703206.877590
 for i in root_files:
     heat_or_env(i)
 
-rec_ob(list_of_files[1:], 0)
-rec_ob_d(list(list_of_files[0].items()), 0)    
+recursive_list(list_of_files[1:], 0)
+recursive_dict(list(list_of_files[0].items()), 0) 
