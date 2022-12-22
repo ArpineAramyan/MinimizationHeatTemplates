@@ -1,7 +1,9 @@
 import yaml
 import flatdict
+import sys
 import re
 import os.path
+from utils.normalized_path import norm_path
 
 key_env =  'resource_registry.*'
 key_words = '(.*get_file$|resources.*type$)'
@@ -10,45 +12,32 @@ y_f = '.*yaml$'
 
 list_of_files = [{}]
 
-def norm_path(path_global, file_path):
-    ret = ''
-    re_match1 = re.match('^../', file_path)
-    re_match2 = re.match('^./', file_path)
+def for_plan_env(eh_file):
+    with open(eh_file, 'r') as fd:
+        eh = yaml.load(fd, Loader=yaml.Loader)
 
-    if re_match1 or re_match2:
-        p1 = os.path.split(path_global)
-        p2 = p1[0]
-        if re_match1:
-            ret = os.path.join(p2, file_path[3:])
-        elif re_match2:
-            ret = os.path.join(path_global, file_path[2:])
-    else:
-        ret = os.path.join(path_global, file_path)
-
-    re_match1 = re.match('^../', file_path[3:])
-
-    if re_match1:
-        ret = norm_path(p2, file_path[3:])
-
-    return ret      
-
-def env_files_helper(dict_env, env_path):
-    for key, value in dict_env.items():
+    eh_path = os.path.split(eh_file)
+    eh_dict = flatdict.FlatDict(eh, delimiter=' - ')
+    for key, value in eh_dict.items():
         if key == 'environments':
             for i in value:
                 if i.get('path'):
-                    absvalue = norm_path(env_path[0], i.get('path'))
+                    absvalue = norm_path(eh_path[0], i.get('path'))
                     if os.path.isfile(absvalue):
-                        list_of_files.append(absvalue)
-        else:
-            re_match = re.match(key_env, key)
-            if re_match and isinstance(value, str):
-                if value == 'None':
-                    list_of_files[0].pop(key, 1)
-                else:    
-                    absvalue = norm_path(env_path[0], value)
-                    if os.path.isfile(absvalue):
-                        list_of_files[0].update({key: absvalue}) 
+                        #print(env_path[1]) тут только plan-env
+                        list_of_files.append(absvalue) 
+
+def env_files_helper(dict_env, env_path):
+    for key, value in dict_env.items():
+        re_match = re.match(key_env, key)
+        if re_match and isinstance(value, str):
+            if value == 'None':
+                list_of_files[0].pop(key, 1)
+            else:
+                absvalue = norm_path(env_path[0], value)
+                if os.path.isfile(absvalue):
+                    print(env_path[1])
+                    list_of_files[0].update({key: absvalue}) 
 
 def heat_files_helper(dict_heat, heat_path):
     for key, value in dict_heat.items():
@@ -92,10 +81,8 @@ def recursive_dict(r_dict, index):
     heat_or_env(r_dict[index][1])
     recursive_dict(list(list_of_files[0].items()), index + 1)
                 
-root_files = ['/home/amp/ankap/or_not/asperitas-heat-templates-1666703206.8775902/roles_data.yaml', '/home/amp/ankap/or_not/asperitas-heat-templates-1666703206.8775902/overcloud.yaml', '/home/amp/ankap/or_not/asperitas-heat-templates-1666703206.8775902/overcloud-resource-registry-puppet.yaml', '/home/amp/ankap/or_not/asperitas-heat-templates-1666703206.8775902/plan-environment.yaml']
+def main(roles_data, overcloud, overcloud_resource_registry_puppet, plan_environment): 
+    for_plan_env(plan_environment)
 
-for i in root_files:
-    heat_or_env(i)
-
-recursive_list(list_of_files[1:], 0)
-recursive_dict(list(list_of_files[0].items()), 0) 
+if __name__ == "__main__":
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
