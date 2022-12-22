@@ -3,7 +3,7 @@ import flatdict
 import sys
 import re
 import os.path
-from utils.normalized_path import norm_path
+from normalized_path import norm_path
 
 key_env =  'resource_registry.*'
 key_words = '(.*get_file$|resources.*type$)'
