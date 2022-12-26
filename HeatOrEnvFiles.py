@@ -12,6 +12,16 @@ y_f = '.*yaml$'
 
 list_of_files = [{}]
 
+def default_services(roles_data):
+    services = []
+    with open(roles_data, 'r') as rd:
+        roles_data_file = yaml.load(rd, Loader=yaml.Loader)
+    for i in roles_data_file:
+        for key, value in i.items():
+            if 'ServicesDefault' in key:
+                services = services + value
+    return services
+
 def for_plan_env(eh_file):
     with open(eh_file, 'r') as fd:
         eh = yaml.load(fd, Loader=yaml.Loader)
