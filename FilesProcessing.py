@@ -112,7 +112,7 @@ def main(roles_data, overcloud, overcloud_resource_registry_puppet, plan_environ
     resources = [roles_data, overcloud, overcloud_resource_registry_puppet, plan_environment]
     services_and_files = {}
 
-    all_services = default_services(hot_home + '/' + roles_data)
+    all_services = used_services(hot_home + '/' + roles_data)
     plan_env_processing(plan_environment, resources, services_and_files, hot_home)
 
     traversal_environment_files(0, all_services, resources, services_and_files, hot_home)
