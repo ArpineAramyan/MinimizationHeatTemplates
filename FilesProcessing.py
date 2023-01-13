@@ -3,7 +3,9 @@ import flatdict
 import sys
 import re
 import os.path
+import pathlib
 from normalized_path import normalized_path
+from copy_file import copy_file
 
 key_word_env = 'resource_registry.*'
 key_words_heat = '(.*get_file$|resources.*type$)'
@@ -111,7 +113,8 @@ def heat_files_traversal(index, resources, services_and_files, hot_home):
     heat_files_traversal(index + 1, resources, services_and_files, hot_home)
 
            
-def main(roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_environment_path, hot_home):
+def main(roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_environment_path, hot_home,
+         copy_hot_home):
     resources = [roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_environment_path]
     services_and_files = {}
 
@@ -120,6 +123,22 @@ def main(roles_data_path, overcloud_path, overcloud_resource_registry_puppet_pat
 
     environment_files_traversal(0, all_services, resources, services_and_files, hot_home)
     heat_files_traversal(0, resources, services_and_files, hot_home)
-    
+
+    for i in resources:
+        path = os.path.split(i)[0]
+        file = os.path.split(i)[1]
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, hot_home, copy_hot_home, path_parts, hot_home, copy_hot_home)
+
+    for value in services_and_files.values():
+        path = os.path.split(value)[0]
+        file = os.path.split(value)[1]
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, hot_home, copy_hot_home, path_parts, hot_home, copy_hot_home)
+
+
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])
+    
