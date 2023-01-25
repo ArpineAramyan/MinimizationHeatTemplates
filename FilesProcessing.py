@@ -7,6 +7,7 @@ import pathlib
 from normalized_rel_path import normalized_rel_path
 from copy_file import copy_file
 
+
 key_word_env = 'resource_registry.*'
 key_words_heat = '(.*get_file$|resources.*type$)'
 heat_file_header = '^heat_template_version'
