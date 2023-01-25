@@ -1,7 +1,5 @@
 import os
 import shutil
-import re
-import pathlib
 
 
 def copy_file(path, file_name, path_parts, home, home_copy):
