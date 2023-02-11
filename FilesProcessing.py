@@ -25,8 +25,28 @@ def used_services(roles_data_path):
                 services = services + value
     return services
 
+
+def overcloud_resource_registry_puppet_processing(overcloud_resource_registry_puppet_path, extra_files,
+                                                  services_and_files, hot_home):
+    file_resources = {}
+    other_resources = {}
+    with open(overcloud_resource_registry_puppet_path, 'r') as fd:
+        overcloud_resource_registry_puppet_data = yaml.load(fd, Loader=yaml.Loader)
+    overcloud_resource_registry_puppet_dict = flatdict.FlatDict(
+        overcloud_resource_registry_puppet_data, delimiter=' - ')
+    for key, value in overcloud_resource_registry_puppet_dict.items():
+        resources_match = re.match(key_word_env, key)
+        if resources_match and 'Services' not in key:
+            if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
+                    and value not in services_and_files.values():
+                file_resources.update({key.split()[-1]: value})
+            elif not os.path.isfile(os.path.join(hot_home, value)) and 'None' not in value:
+                other_resources.update({key.split()[-1]: value})
+    return file_resources, other_resources
+
+
 # saving files that are used in plan_environment.yaml
-def plan_env_processing(plan_env_path, resources, services_and_files, hot_home):
+def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home):
     full_path = os.path.join(hot_home, plan_env_path)
     with open(full_path, 'r') as fd:
         plan_env_data = yaml.load(fd, Loader=yaml.Loader)
@@ -38,13 +58,14 @@ def plan_env_processing(plan_env_path, resources, services_and_files, hot_home):
                 if file_path.get('path'):
                     normalized = normalized_rel_path(plan_env_path[0], file_path.get('path'))
                     abs_value = os.path.join(hot_home, normalized)
-                    if os.path.isfile(abs_value) and normalized not in resources \
+                    if os.path.isfile(abs_value) and normalized not in extra_files \
                             and normalized not in services_and_files.values():
-                        resources.append(normalized)
+                        extra_files.append(normalized)
     return
 
+
 # saving files that are used in environment files
-def env_file_processing(env_file, all_services, resources, services_and_files, hot_home):
+def env_file_processing(env_file, all_services, extra_files, services_and_files, hot_home, file_resources):
     type_checking = True
     yaml_match = re.match(yaml_file_extension, env_file)
     if yaml_match:
@@ -68,14 +89,16 @@ def env_file_processing(env_file, all_services, resources, services_and_files, h
                         else:
                             normalized = normalized_rel_path(env_file_path[0], value)
                             abs_value = os.path.join(hot_home, normalized)
-                            if os.path.isfile(abs_value) and normalized not in resources \
+                            if os.path.isfile(abs_value) and normalized not in extra_files \
                                     and normalized not in services_and_files.values() \
-                                    and key.split()[-1] in all_services:
+                                    and key.split()[-1] in all_services  \
+                                    and normalized not in file_resources.values():
                                 services_and_files.update({key.split()[-1]: normalized})
     return
 
+
 # saving files that are used in heat files
-def heat_file_processing(heat_file, resources, services_and_files, hot_home):
+def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, file_resources):
     type_checking = False
     yaml_match = re.match(yaml_file_extension, heat_file)
     if yaml_match:
@@ -95,39 +118,44 @@ def heat_file_processing(heat_file, resources, services_and_files, hot_home):
                 if heat_match and isinstance(value, str):
                     normalized = normalized_rel_path(heat_file_path[0], value)
                     abs_value = os.path.join(hot_home, normalized)
-                    if os.path.isfile(abs_value) and normalized not in resources \
-                            and normalized not in services_and_files.values():
-                        resources.append(normalized)
+                    if os.path.isfile(abs_value) and normalized not in extra_files \
+                            and normalized not in services_and_files.values() \
+                            and normalized not in file_resources.values():
+                        extra_files.append(normalized)
     return
 
 
-def env_files_traversal(index, all_services, resources, services_and_files, hot_home):
-    if len(resources) <= index:
+def env_files_traversal(index, all_services, extra_files, services_and_files, hot_home, file_resources):
+    if len(extra_files) <= index:
         return
-    env_file_processing(resources[index], all_services, resources, services_and_files, hot_home)
-    env_files_traversal(index + 1, all_services, resources, services_and_files, hot_home)
+    env_file_processing(extra_files[index], all_services, extra_files, services_and_files, hot_home, file_resources)
+    env_files_traversal(index + 1, all_services, extra_files, services_and_files, hot_home, file_resources)
 
 
-def heat_files_traversal(index, resources, services_and_files, hot_home):
+def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources):
     if len(services_and_files.items()) <= index:
         return
-    heat_file_processing(list(services_and_files.items())[index][1], resources, services_and_files, hot_home)
-    heat_files_traversal(index + 1, resources, services_and_files, hot_home)
+    heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
+                         file_resources)
+    heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources)
 
 
 def main(roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_env_path, hot_home,
          copy_hot_home):
-    resources = [roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_env_path]
+    extra_files = [roles_data_path, overcloud_path, overcloud_resource_registry_puppet_path, plan_env_path]
     services_and_files = {}
 
     all_services = used_services(os.path.join(hot_home, roles_data_path))
-    plan_env_processing(plan_env_path, resources, services_and_files, hot_home)
+    file_resources, other_resources = overcloud_resource_registry_puppet_processing(
+        os.path.join(hot_home, overcloud_resource_registry_puppet_path), extra_files, services_and_files, hot_home)
 
-    env_files_traversal(0, all_services, resources, services_and_files, hot_home)
-    heat_files_traversal(0, resources, services_and_files, hot_home)
+    plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home)
 
-    # the next two cycles are for copying used files
-    for resource in resources:
+    env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources)
+    heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
+
+    # the next three cycles are for copying used files
+    for resource in extra_files:
         path, file = os.path.split(resource)
         path_parts = pathlib.PosixPath(path)
         path_parts = list(path_parts.parts)
@@ -139,5 +167,22 @@ def main(roles_data_path, overcloud_path, overcloud_resource_registry_puppet_pat
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
+    for each_file in file_resources.values():
+        path, file = os.path.split(each_file)
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, path_parts, hot_home, copy_hot_home)
+
+    for i in extra_files:
+        print(i)
+    for i in file_resources.values():
+        print(i)
+    for i in services_and_files.values():
+        print(i)
+
+    print(len(file_resources) + len(services_and_files) + len(extra_files))
+
+
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])
+
