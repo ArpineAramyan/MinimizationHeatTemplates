@@ -1,11 +1,11 @@
 import yaml
 import flatdict
-import sys
 import re
 import os.path
 import pathlib
 from normalized_rel_path import normalized_rel_path
 from copy_file import copy_file
+from commands import get_parser
 
 
 key_word_resources = 'resource_registry.*'
@@ -165,9 +165,13 @@ def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_
                          file_resources)
     heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources)
 
+# ='./'
+# ='../minimized-heat-templates'
+# ='roles_data.yaml'
+# ='plan-environment.yaml'
 
-def main(hot_home='./',  copy_hot_home='../minimized-heat-templates', roles_data_path='roles_data.yaml',
-         plan_env_path='plan-environment.yaml'):
+
+def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
 
     if not os.path.isdir(hot_home):
         hot_home = os.path.abspath(hot_home)
@@ -209,6 +213,11 @@ def main(hot_home='./',  copy_hot_home='../minimized-heat-templates', roles_data
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
+    print(len(extra_files) + len(services_and_files) + len(file_resources))
+
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    parser = get_parser()
+    args = parser.parse_args()
+    arguments = (vars(args))
+    main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'], arguments['plan_env'])
