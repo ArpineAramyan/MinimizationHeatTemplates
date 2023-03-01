@@ -1,14 +1,4 @@
 import argparse
-import os
-
-
-# # Create a shell script file
-# with open('Minimize', 'w') as f:
-#     f.write('#!/bin/bash\n')
-#     f.write('python3 {} "$@"'.format(os.path.abspath('main.py')))
-#
-# # Make the file executable
-# os.chmod('Minimize', 0o755)
 
 
 def get_parser():
@@ -16,7 +6,7 @@ def get_parser():
     parser.add_argument('-th', '--templates_home',
                         metavar='<directory>',
                         type=str,
-                        default='./',
+                        # default='./',
                         help='Path to templates home directory')
     parser.add_argument('-m', '--minimized',
                         metavar='<directory>',
