@@ -211,7 +211,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
-    print(len(extra_files) + len(services_and_files) + len(file_resources))
+    # print(len(extra_files) + len(services_and_files) + len(file_resources))
 
 
 if __name__ == "__main__":
