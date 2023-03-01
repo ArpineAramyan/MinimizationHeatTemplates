@@ -172,12 +172,10 @@ def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_
 
 
 def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
-
     if not os.path.isdir(hot_home):
         hot_home = os.path.abspath(hot_home)
     if not os.path.isdir(copy_hot_home):
         copy_hot_home = os.path.abspath(copy_hot_home)
-
     extra_files = [roles_data_path, plan_env_path]
     parameters_defaults = {}
 
@@ -218,6 +216,6 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
 
 if __name__ == "__main__":
     parser = get_parser()
-    args = parser.parse_args()
-    arguments = (vars(args))
+    arguments = vars(parser.parse_args())
+    print(arguments)
     main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'], arguments['plan_env'])
