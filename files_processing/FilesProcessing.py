@@ -3,9 +3,12 @@ import flatdict
 import re
 import os.path
 import pathlib
-from normalized_rel_path import normalized_rel_path
-from copy_file import copy_file
-from commands import get_parser
+
+parent = os.path.abspath('.')
+
+from parent.normalized_rel_path import normalized_rel_path
+from parent.copy_file import copy_file
+from parent.commands import get_parser
 
 
 key_word_resources = 'resource_registry.*'
