@@ -3,12 +3,8 @@ import flatdict
 import re
 import os.path
 import pathlib
-
-parent = os.path.abspath('.')
-
-from parent.normalized_rel_path import normalized_rel_path
-from parent.copy_file import copy_file
-from parent.commands import get_parser
+from files_processing.normalized_rel_path import normalized_rel_path
+from files_processing.copy_file import copy_file
 
 
 key_word_resources = 'resource_registry.*'
@@ -210,8 +206,5 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
 
-if __name__ == "__main__":
-    parser = get_parser()
-    arguments = vars(parser.parse_args())
-    print(arguments)
-    main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'], arguments['plan_env'])
+# if __name__ == "__main__":
+#
