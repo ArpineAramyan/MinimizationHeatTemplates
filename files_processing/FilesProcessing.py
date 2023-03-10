@@ -204,7 +204,3 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
         path_parts = pathlib.PosixPath(path)
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
-
-
-# if __name__ == "__main__":
-#
