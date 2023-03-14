@@ -38,7 +38,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
         resources_match = re.match(key_word_resources, key)
         if resources_match and 'Services' not in key:
             if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
-                    and value not in services_and_files.values():
+                    and value not in services_and_files.values() and value not in file_resources.values():
                 file_resources.update({key.split()[-1]: value})
             elif not os.path.isfile(os.path.join(hot_home, value)) and 'None' not in value:
                 other_resources.update({key.split()[-1]: value})
@@ -162,6 +162,9 @@ def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_
         return
     heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
                          file_resources)
+    if len(file_resources.items()) > index:
+        heat_file_processing(list(file_resources.items())[index][1], extra_files, services_and_files, hot_home,
+                              file_resources)
     heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources)
 
 
@@ -181,10 +184,17 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
     # in key resource type, in value file path
     file_resources, other_resources = overcloud_resource_registry_puppet_processing(extra_files, services_and_files,
                                                                                     hot_home)
+    for each_file in file_resources.values():
+        path, file = os.path.split(each_file)
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
     env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
                         parameters_defaults)
     heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
+    file_resources_l = list(file_resources.values())
+    heat_files_traversal(0, file_resources_l, services_and_files, hot_home, file_resources)
 
     # the next three cycles are for copying used files
     for resource in extra_files:
