@@ -36,7 +36,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
         overcloud_resource_registry_puppet_data, delimiter=' - ')
     for key, value in overcloud_resource_registry_puppet_dict.items():
         resources_match = re.match(key_word_resources, key)
-        if resources_match and 'Services' not in key:
+        if resources_match and 'Services::' not in key:
             if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
                     and value not in services_and_files.values() and value not in file_resources.values():
                 file_resources.update({key.split()[-1]: value})
