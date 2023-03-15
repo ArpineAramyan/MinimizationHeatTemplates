@@ -93,7 +93,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                         else:
                             print("Found parameter overwrite -", key_param)
 
-            env_file_dict = flatdict.FlatDict(env_file_data, delimiter=' - ')
+            env_file_dict = flatdict.FlatterDict(env_file_data, delimiter=' - ')
             for key, value in env_file_dict.items():
                 is_heat = re.match(heat_file_header, key)
                 if is_heat:
@@ -142,8 +142,7 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
         with open(full_path, 'r') as fd:
             heat_file_data = yaml.load(fd, Loader=yaml.Loader)
         heat_file_path = os.path.split(heat_file)
-        heat_file_dict = flatdict.FlatDict(heat_file_data, delimiter=' - ')
-
+        heat_file_dict = flatdict.FlatterDict(heat_file_data, delimiter=' - ')
         for key, value in heat_file_dict.items():
             is_heat = re.match(heat_file_header, key)
             if is_heat:
@@ -160,22 +159,6 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
                             and normalized not in services_and_files.values() \
                             and normalized not in file_resources.values():
                         extra_files.append(normalized)
-
-                if isinstance(value, list):
-                    flat_list = []
-                    flatlist(value, flat_list)
-                    for each_list in flat_list:
-                        if isinstance(each_list, dict):
-                            flat_dict = flatdict.FlatDict(each_list, delimiter=' - ')
-                            for dict_key, dict_value in flat_dict.items():
-                                match = re.match(key_words_heat, dict_key)
-                                if match:
-                                    normalized = normalized_rel_path(heat_file_path[0], dict_value)
-                                    abs_value = os.path.join(hot_home, normalized)
-                                    if os.path.isfile(abs_value) and normalized not in extra_files \
-                                            and normalized not in services_and_files.values() \
-                                            and normalized not in file_resources.values():
-                                        extra_files.append(normalized)
 
     return
 
@@ -259,3 +242,5 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data)
         path_parts = pathlib.PosixPath(path)
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
+
+
