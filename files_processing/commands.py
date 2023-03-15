@@ -25,6 +25,10 @@ def get_parser():
                         type=str,
                         default='plan-environment.yaml',
                         help='Path from templates home to plan-environment file')
+    parser.add_argument('-nd', '--network_data',
+                        metavar='<filename>',
+                        default='network_data.yaml',
+                        help='Path from templates home to network_data file')
     return parser
 
 
@@ -34,4 +38,4 @@ def main(args=None):
     parser = get_parser()
     arguments = vars(parser.parse_args(args))
     files_processing.FilesProcessing.main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'],
-                                          arguments['plan_env'])
+                                          arguments['plan_env'], arguments['network_data'])

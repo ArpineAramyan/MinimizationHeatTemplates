@@ -73,6 +73,7 @@ def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home
 # saving files that are used in environment files
 def env_file_processing(env_file, all_services, extra_files, services_and_files, hot_home,
                         file_resources, other_resources, parameters_defaults):
+
     type_checking = True
     yaml_match = re.match(yaml_file_extension, env_file)
 
@@ -97,9 +98,12 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                 is_heat = re.match(heat_file_header, key)
                 if is_heat:
                     type_checking = False
+                    heat_file_processing(env_file, extra_files, services_and_files, hot_home, file_resources)
+                    # return
                     break
 
             if type_checking:
+
                 for key, value in env_file_dict.items():
                     env_match = re.match(key_word_resources, key)
                     if env_match and isinstance(value, str):
@@ -132,17 +136,20 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
 def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, file_resources):
     type_checking = False
     yaml_match = re.match(yaml_file_extension, heat_file)
+
     if yaml_match:
         full_path = os.path.join(hot_home, heat_file)
         with open(full_path, 'r') as fd:
             heat_file_data = yaml.load(fd, Loader=yaml.Loader)
         heat_file_path = os.path.split(heat_file)
         heat_file_dict = flatdict.FlatDict(heat_file_data, delimiter=' - ')
+
         for key, value in heat_file_dict.items():
             is_heat = re.match(heat_file_header, key)
             if is_heat:
                 type_checking = True
                 break
+
         if type_checking:
             for key, value in heat_file_dict.items():
                 heat_match = re.match(key_words_heat, key)
@@ -153,6 +160,7 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
                             and normalized not in services_and_files.values() \
                             and normalized not in file_resources.values():
                         extra_files.append(normalized)
+
                 if isinstance(value, list):
                     flat_list = []
                     flatlist(value, flat_list)
@@ -183,20 +191,20 @@ def env_files_traversal(index, all_services, extra_files, services_and_files, ho
 
 
 def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources):
+
     if len(services_and_files.items()) > index:
         heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
                          file_resources)
+
     if len(file_resources.items()) > index:
         heat_file_processing(list(file_resources.items())[index][1], extra_files, services_and_files, hot_home,
                               file_resources)
-    # if len(extra_files) > index:
-    #     heat_file_processing(extra_files[index], extra_files, services_and_files, hot_home, file_resources)
-    if len(services_and_files.items()) <= index and len(file_resources.items()) <= index: #and len(extra_files) <= index:
+    if len(services_and_files.items()) <= index and len(file_resources.items()) <= index:
         return
     heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources)
 
 
-def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
+def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data):
     if not os.path.isdir(hot_home):
         hot_home = os.path.abspath(hot_home)
     if not os.path.isdir(copy_hot_home):
@@ -204,7 +212,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
         if not os.path.isdir(copy_hot_home):
             os.mkdir(os.path.abspath(copy_hot_home))
 
-    extra_files = [roles_data_path, plan_env_path]
+    extra_files = [roles_data_path, plan_env_path, network_data]
     parameters_defaults = {}
 
     services_and_files = {}
@@ -222,9 +230,17 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path):
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
-    env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
+    env_index = 0
+    heat_index = 0
+
+    env_files_traversal(env_index, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
                         parameters_defaults)
-    heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
+    env_index = len(extra_files)
+    heat_files_traversal(heat_index, extra_files, services_and_files, hot_home, file_resources)
+
+    if env_index < len(extra_files):
+        env_files_traversal(env_index, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
+                        parameters_defaults)
 
     for file_path in services_and_files.values():
         path, file = os.path.split(file_path)
