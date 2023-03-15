@@ -28,7 +28,7 @@ def used_services(roles_data_path):
 
 
 def overcloud_resource_registry_puppet_processing(extra_files, services_and_files, hot_home):
-    overcloud_resource_registry_puppet_path = os.path.join(hot_home, extra_files[3])
+    overcloud_resource_registry_puppet_path = os.path.join(hot_home, extra_files[4])
     file_resources = {}
     other_resources = {}
 
