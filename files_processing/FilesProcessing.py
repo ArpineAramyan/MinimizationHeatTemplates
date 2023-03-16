@@ -31,6 +31,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
     overcloud_resource_registry_puppet_path = os.path.join(hot_home, extra_files[4])
     file_resources = {}
     other_resources = {}
+    warning_resources = {}
 
     with open(overcloud_resource_registry_puppet_path, 'r') as fd:
         overcloud_resource_registry_puppet_data = yaml.load(fd, Loader=yaml.Loader)
@@ -49,16 +50,20 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
             else:
                 if 'None' in value:
                     services_and_files.pop(key.split()[-1], 1)
-                    if key.split()[-1] in all_services:
-                        all_services.remove(key.split()[-1])
                 else:
                     if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
                             and value not in services_and_files.values() \
                             and key.split()[-1] in all_services \
                             and value not in file_resources.values():
                         services_and_files.update({key.split()[-1]: value})
+                    elif os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
+                            and value not in services_and_files.values() \
+                            and key.split()[-1] not in all_services \
+                            and value not in file_resources.values():
+                        print('Warning! This parameter is not defined in roles_data -', key.split()[-1])
+                        warning_resources.update({key.split()[-1]: value})
 
-    return file_resources, other_resources
+    return file_resources, other_resources, warning_resources
 
 
 # saving files that are used in plan_environment.yaml
@@ -84,7 +89,7 @@ def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home
 
 # saving files that are used in environment files
 def env_file_processing(env_file, all_services, extra_files, services_and_files, hot_home,
-                        file_resources, other_resources, parameters_defaults):
+                        file_resources, other_resources, parameters_defaults, warning_resources):
     type_checking = True
     yaml_match = re.match(yaml_file_extension, env_file)
 
@@ -102,7 +107,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                         if key_param not in parameters_defaults:
                             parameters_defaults.update({key_param: value_param})
                         else:
-                            print("Found parameter overwrite -", key_param)
+                            print("Warning! Found parameter overwrite -", key_param)
 
             env_file_dict = flatdict.FlatterDict(env_file_data, delimiter=' - ')
             for key, value in env_file_dict.items():
@@ -129,6 +134,13 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                                         and key.split()[-1] in all_services  \
                                         and normalized not in file_resources.values():
                                     services_and_files.update({key.split()[-1]: normalized})
+
+                                elif os.path.isfile(abs_value) and normalized not in extra_files \
+                                        and normalized not in services_and_files.values() \
+                                        and key.split()[-1] not in all_services  \
+                                        and normalized not in file_resources.values():
+                                    print('Warning! This parameter is not defined in roles_data -', key.split()[-1])
+                                    warning_resources.update({key.split()[-1]: normalized})
                         else:
                             if 'None' in value:
                                 file_resources.pop(key.split()[-1], 1)
@@ -175,13 +187,13 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
 
 
 def env_files_traversal(index, all_services, extra_files, services_and_files, hot_home,
-                        file_resources, other_resources, parameters_defaults):
+                        file_resources, other_resources, parameters_defaults, warning_resources):
     if len(extra_files) <= index:
         return
     env_file_processing(extra_files[index], all_services, extra_files, services_and_files, hot_home,
-                        file_resources, other_resources, parameters_defaults)
+                        file_resources, other_resources, parameters_defaults, warning_resources)
     env_files_traversal(index + 1, all_services, extra_files, services_and_files, hot_home,
-                        file_resources, other_resources, parameters_defaults)
+                        file_resources, other_resources, parameters_defaults, warning_resources)
 
 
 def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources):
@@ -219,8 +231,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data)
     plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home)
 
     # in key resource type, in value file path
-    file_resources, other_resources = overcloud_resource_registry_puppet_processing(extra_files, services_and_files,
-                                                                                    hot_home, all_services)
+    file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
+                                                                        services_and_files, hot_home, all_services)
     for each_file in file_resources.values():
         path, file = os.path.split(each_file)
         path_parts = pathlib.PosixPath(path)
@@ -233,20 +245,26 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data)
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
+    for each_file in warning_resources.values():
+        path, file = os.path.split(each_file)
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, path_parts, hot_home, copy_hot_home)
+
     heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
     env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
-                        parameters_defaults)
+                        parameters_defaults, warning_resources)
     heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
 
     for service, file_path in services_and_files.items():
-        print(service, ' - ', file_path)
+        # print(service, ' - ', file_path)
         path, file = os.path.split(file_path)
         path_parts = pathlib.PosixPath(path)
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
     for resource, each_file in file_resources.items():
-        print(resource, ' - ', each_file)
+        # print(resource, ' - ', each_file)
         path, file = os.path.split(each_file)
         path_parts = pathlib.PosixPath(path)
         path_parts = list(path_parts.parts)
@@ -258,3 +276,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data)
         path_parts = list(path_parts.parts)
         copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
+    for each_file in warning_resources.values():
+        path, file = os.path.split(each_file)
+        path_parts = pathlib.PosixPath(path)
+        path_parts = list(path_parts.parts)
+        copy_file(path, file, path_parts, hot_home, copy_hot_home)
