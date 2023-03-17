@@ -29,6 +29,15 @@ def get_parser():
                         metavar='<filename>',
                         default='network_data.yaml',
                         help='Path from templates home to network_data file')
+    parser.add_argument('--parameters',
+                        action='store_true',
+                        help='This flag is responsible for printing parameters')
+    parser.add_argument('--services',
+                        action='store_true',
+                        help='This flag is responsible for printing services')
+    parser.add_argument('--resources',
+                        action='store_true',
+                        help='This flag is responsible for printing resources')
     return parser
 
 
@@ -38,4 +47,5 @@ def main(args=None):
     parser = get_parser()
     arguments = vars(parser.parse_args(args))
     files_processing.FilesProcessing.main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'],
-                                          arguments['plan_env'], arguments['network_data'])
+                                          arguments['plan_env'], arguments['network_data'], arguments['parameters'],
+                                          arguments['services'], arguments['resources'])
