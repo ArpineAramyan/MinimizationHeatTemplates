@@ -1,12 +1,11 @@
 import yaml
+# from yaml import CLoader as Loader
 import flatdict
 import re
 import os
 import pathlib
-import json
 from files_processing.normalized_rel_path import normalized_rel_path
 from files_processing.copy_file import copy_file
-from files_processing.flatlist import flatlist
 
 
 key_word_resources = 'resource_registry.*'
@@ -187,6 +186,7 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
 
     return
 
+
 def env_files_traversal(index, all_services, extra_files, services_and_files, hot_home,
                         file_resources, other_resources, parameters_defaults, warning_resources):
     if len(extra_files) <= index:
@@ -200,11 +200,11 @@ def env_files_traversal(index, all_services, extra_files, services_and_files, ho
 def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources):
     if len(services_and_files.items()) > index:
         heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
-                         file_resources)
+                             file_resources)
 
     if len(file_resources.items()) > index:
         heat_file_processing(list(file_resources.items())[index][1], extra_files, services_and_files, hot_home,
-                              file_resources)
+                             file_resources)
 
     if len(extra_files) > index:
         heat_file_processing(extra_files[index], extra_files, services_and_files, hot_home, file_resources)
@@ -231,7 +231,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
         all_services = used_services(os.path.join(copy_hot_home, roles_data_path))
         plan_env_processing(plan_env_path, extra_files, services_and_files, copy_hot_home)
         file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
-                                                        services_and_files, copy_hot_home, all_services)
+                                                                    services_and_files, copy_hot_home, all_services)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
                             other_resources, parameters_defaults, warning_resources)
         heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources)

@@ -9,38 +9,43 @@ def get_parser():
                         metavar='<directory>',
                         type=str,
                         default='./',
-                        help='Path to templates home directory')
+                        help='Path to templates home directory. '
+                             'Default value: "./"')
     parser.add_argument('-m', '--minimized',
                         metavar='<directory>',
                         type=str,
                         default='../minimized-heat-templates',
-                        help='Path to directory with minimized templates')
+                        help='Path to directory with minimized templates. '
+                             'Default value: "../minimized-heat-templates"')
     parser.add_argument('-rd', '--roles_data',
                         metavar='<filename>',
                         type=str,
                         default='roles_data.yaml',
-                        help='Path from templates home to roles_data file')
+                        help='Path from templates home to roles_data file. '
+                             'Default value: "roles_data.yaml"')
     parser.add_argument('-pe', '--plan_env',
                         metavar='<filename>',
                         type=str,
                         default='plan-environment.yaml',
-                        help='Path from templates home to plan-environment file')
+                        help='Path from templates home to plan-environment file. '
+                             'Default value: "plan-environment.yaml"')
     parser.add_argument('-nd', '--network_data',
                         metavar='<filename>',
                         default='network_data.yaml',
-                        help='Path from templates home to network_data file')
+                        help='Path from templates home to network_data file. '
+                             'Default value: "network_data.yaml"')
     parser.add_argument('--parameters',
                         action='store_true',
-                        help='This flag is responsible for printing parameters')
+                        help='Add this flag for printing parameters.')
     parser.add_argument('--services',
                         action='store_true',
-                        help='This flag is responsible for printing services')
+                        help='Add this flag for printing services.')
     parser.add_argument('--resources',
                         action='store_true',
-                        help='This flag is responsible for printing resources')
+                        help='Add this flag for printing resources.')
     parser.add_argument('--param_only',
                         action='store_true',
-                        help='Add this flag for parameters in minimized set')
+                        help='Add this flag for printing parameters in minimized set.')
     return parser
 
 
