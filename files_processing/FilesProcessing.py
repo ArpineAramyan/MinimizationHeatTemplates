@@ -1,5 +1,4 @@
 import yaml
-# from yaml import CLoader as Loader
 import flatdict
 import re
 import os
@@ -69,7 +68,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
 
 
 # saving files that are used in plan_environment.yaml
-def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home):
+def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home, parameters_defaults):
     full_path = os.path.join(hot_home, plan_env_path)
     with open(full_path, 'r') as fd:
         plan_env_data = yaml.load(fd, Loader=yaml.Loader)
@@ -86,6 +85,10 @@ def plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home
                     if os.path.isfile(abs_value) and normalized not in extra_files \
                             and normalized not in services_and_files.values():
                         extra_files.append(normalized)
+        parameters_match = re.match(key_word_param, key)
+        if parameters_match and isinstance(value, dict):
+            for key_param, value_param in value.items():
+                parameters_defaults.update({key_param: value_param})
     return
 
 
@@ -215,7 +218,7 @@ def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_
 
 
 def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
-         parameters_flag, services_flag, resources_flag, param_only):
+         parameters_flag, services_flag, resources_flag, not_templates_flag, param_only):
     if not os.path.isdir(hot_home):
         hot_home = os.path.abspath(hot_home)
     if not os.path.isdir(copy_hot_home):
@@ -229,7 +232,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
 
     if param_only:
         all_services = used_services(os.path.join(copy_hot_home, roles_data_path))
-        plan_env_processing(plan_env_path, extra_files, services_and_files, copy_hot_home)
+        plan_env_processing(plan_env_path, extra_files, services_and_files, copy_hot_home, parameters_defaults)
         file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
                                                                     services_and_files, copy_hot_home, all_services)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
@@ -239,7 +242,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
 
     else:
         all_services = used_services(os.path.join(hot_home, roles_data_path))
-        plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home)
+        plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home, parameters_defaults)
 
         # in key resource type, in value file path
         file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
@@ -268,39 +271,59 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
                             parameters_defaults, warning_resources)
         heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
 
+        not_templates = []
         for service, file_path in services_and_files.items():
             if os.path.isfile(os.path.join(hot_home, file_path)):
+                yaml_match = re.match(yaml_file_extension, file_path)
+                if not yaml_match:
+                    not_templates.append(file_path)
                 path, file = os.path.split(file_path)
                 path_parts = pathlib.PosixPath(path)
                 path_parts = list(path_parts.parts)
                 copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
         for resource, each_file in file_resources.items():
+            yaml_match = re.match(yaml_file_extension, each_file)
+            if not yaml_match:
+                not_templates.append(each_file)
             path, file = os.path.split(each_file)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
         for resource in extra_files:
+            yaml_match = re.match(yaml_file_extension, resource)
+            if not yaml_match:
+                not_templates.append(resource)
             path, file = os.path.split(resource)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
         for each_file in warning_resources.values():
+            yaml_match = re.match(yaml_file_extension, each_file)
+            if not yaml_match:
+                not_templates.append(each_file)
             path, file = os.path.split(each_file)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
         if parameters_flag:
+            print('PARAMETERS')
             print(yaml.dump(parameters_defaults))
 
         if services_flag:
+            print('SERVICES')
             print(yaml.dump(services_and_files))
             print(yaml.dump(warning_resources))
 
         if resources_flag:
+            print('RESOURCES')
             print(yaml.dump(extra_files))
             print(yaml.dump(file_resources))
             print(yaml.dump(other_resources))
+
+        if not_templates_flag:
+            print('NOT TEMPLATES')
+            print(yaml.dump(not_templates))

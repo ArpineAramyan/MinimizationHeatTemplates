@@ -43,6 +43,9 @@ def get_parser():
     parser.add_argument('--resources',
                         action='store_true',
                         help='Add this flag for printing resources.')
+    parser.add_argument('--not_templates',
+                        action='store_true',
+                        help='Add this flag for printing files that are not templates.')
     parser.add_argument('--param_only',
                         action='store_true',
                         help='Add this flag for printing parameters in minimized set.')
@@ -56,4 +59,5 @@ def main(args=None):
     arguments = vars(parser.parse_args(args))
     files_processing.FilesProcessing.main(arguments['templates_home'], arguments['minimized'], arguments['roles_data'],
                                           arguments['plan_env'], arguments['network_data'], arguments['parameters'],
-                                          arguments['services'], arguments['resources'], arguments['param_only'])
+                                          arguments['services'], arguments['resources'], arguments['not_templates'],
+                                          arguments['param_only'])
