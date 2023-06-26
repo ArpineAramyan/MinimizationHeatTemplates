@@ -1,3 +1,4 @@
+import json
 import yaml
 import flatdict
 import re
@@ -12,6 +13,29 @@ key_word_param = 'parameter_defaults.*'
 key_words_heat = '(.*get_file$|resources.*type$)'
 heat_file_header = '^heat_template_version'
 yaml_file_extension = '.*yaml$'
+parameters_extension = '^parameters.*'
+
+
+def is_json(myjson):
+    try:
+        json.loads(myjson)
+    except ValueError as e:
+        return False
+    return True
+
+
+def parameter_type_checker(parameter_value, parameter_type):
+    if parameter_type == 'json' and is_json(str(parameter_value)):
+        return True
+    if parameter_type == 'comma_delimited_list' and isinstance(parameter_value, list):
+        return True
+    if parameter_type == 'string' and isinstance(parameter_value, str):
+        return True
+    if parameter_type == 'number' and isinstance(parameter_value, int):
+        return True
+    if parameter_type == 'boolean' and isinstance(parameter_value, bool):
+        return True
+    return False
 
 
 # saving services that used in roles_data.yaml
@@ -160,7 +184,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
 
 
 # saving files that are used in heat files
-def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, file_resources):
+def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, file_resources, heat_parameters):
     type_checking = False
     yaml_match = re.match(yaml_file_extension, heat_file)
 
@@ -177,6 +201,18 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
                 break
 
         if type_checking:
+            for key, value in heat_file_data.items():
+                parameters_match = re.match(parameters_extension, key)
+                if parameters_match:
+                    for key_param, value_param in value.items():
+                        value_info = {'default': '', 'type': '', 'description': ''}
+                        if 'default' in value_param.keys():
+                            value_info.update({'default': value_param['default']})
+                        if 'type' in value_param.keys():
+                            value_info.update({'type': value_param['type']})
+                        if 'description' in value_param.keys():
+                            value_info.update({'description': value_param['description']})
+                        heat_parameters.update({key_param: value_info})
             for key, value in heat_file_dict.items():
                 heat_match = re.match(key_words_heat, key)
                 if heat_match and isinstance(value, str):
@@ -186,7 +222,6 @@ def heat_file_processing(heat_file, extra_files, services_and_files, hot_home, f
                             and normalized not in services_and_files.values() \
                             and normalized not in file_resources.values():
                         extra_files.append(normalized)
-
     return
 
 
@@ -200,25 +235,26 @@ def env_files_traversal(index, all_services, extra_files, services_and_files, ho
                         file_resources, other_resources, parameters_defaults, warning_resources)
 
 
-def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources):
+def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources, heat_parameters):
     if len(services_and_files.items()) > index:
         heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
-                             file_resources)
+                             file_resources, heat_parameters)
 
     if len(file_resources.items()) > index:
         heat_file_processing(list(file_resources.items())[index][1], extra_files, services_and_files, hot_home,
-                             file_resources)
+                             file_resources, heat_parameters)
 
     if len(extra_files) > index:
-        heat_file_processing(extra_files[index], extra_files, services_and_files, hot_home, file_resources)
+        heat_file_processing(extra_files[index], extra_files, services_and_files, hot_home, file_resources,
+                             heat_parameters)
 
     if len(services_and_files.items()) <= index and len(file_resources.items()) <= index and len(extra_files) <= index:
         return
-    heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources)
+    heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
 
 
 def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
-         parameters_flag, services_flag, resources_flag, not_templates_flag, param_only):
+         parameters_flag, services_flag, not_templates_flag, param_only):
     if not os.path.isdir(hot_home):
         hot_home = os.path.abspath(hot_home)
     if not os.path.isdir(copy_hot_home):
@@ -229,6 +265,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
     extra_files = [roles_data_path, plan_env_path, network_data]
     parameters_defaults = {}
     services_and_files = {}
+    heat_parameters = {}
+    not_templates = []
 
     if param_only:
         all_services = used_services(os.path.join(copy_hot_home, roles_data_path))
@@ -237,41 +275,40 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
                                                                     services_and_files, copy_hot_home, all_services)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
                             other_resources, parameters_defaults, warning_resources)
-        heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources)
+        heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters)
         print(yaml.dump(parameters_defaults))
 
     else:
         all_services = used_services(os.path.join(hot_home, roles_data_path))
         plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home, parameters_defaults)
-
         # in key resource type, in value file path
         file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
                                                             services_and_files, hot_home, all_services)
-
         for each_file in file_resources.values():
             path, file = os.path.split(each_file)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
+            heat_file_processing(each_file, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
 
         for file_path in services_and_files.values():
             path, file = os.path.split(file_path)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
+            heat_file_processing(file_path, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
 
         for each_file in warning_resources.values():
             path, file = os.path.split(each_file)
             path_parts = pathlib.PosixPath(path)
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
+            heat_file_processing(each_file, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
 
-        services_and_files = {}
         env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
                             parameters_defaults, warning_resources)
-        heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources)
+        heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
 
-        not_templates = []
         for service, file_path in services_and_files.items():
             if os.path.isfile(os.path.join(hot_home, file_path)):
                 yaml_match = re.match(yaml_file_extension, file_path)
@@ -309,6 +346,17 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
             path_parts = list(path_parts.parts)
             copy_file(path, file, path_parts, hot_home, copy_hot_home)
 
+        for parameter in parameters_defaults.keys():
+            if parameter not in heat_parameters.keys():
+                print('Warning! This parameter is not defined in heat templates -', parameter)
+
+        # for parameter, value_param in heat_parameters.items():
+        #     if parameter not in parameters_defaults.keys() and value_param['default'] != '':
+        #         parameters_defaults.update({parameter: value_param['default']})
+        #     if parameter in parameters_defaults.keys():
+        #         if not parameter_type_checker(parameters_defaults[parameter], value_param['type']):
+        #             print('Value does not match the type. Check this parameter - ', parameter)
+
         if parameters_flag:
             print('PARAMETERS')
             print(yaml.dump(parameters_defaults))
@@ -317,12 +365,6 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
             print('SERVICES')
             print(yaml.dump(services_and_files))
             print(yaml.dump(warning_resources))
-
-        if resources_flag:
-            print('RESOURCES')
-            print(yaml.dump(extra_files))
-            print(yaml.dump(file_resources))
-            print(yaml.dump(other_resources))
 
         if not_templates_flag:
             print('NOT TEMPLATES')
