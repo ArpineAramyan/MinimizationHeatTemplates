@@ -235,7 +235,8 @@ def env_files_traversal(index, all_services, extra_files, services_and_files, ho
                         file_resources, other_resources, parameters_defaults, warning_resources)
 
 
-def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources, heat_parameters):
+def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_resources, heat_parameters,
+                         warning_resources):
     if len(services_and_files.items()) > index:
         heat_file_processing(list(services_and_files.items())[index][1], extra_files, services_and_files, hot_home,
                              file_resources, heat_parameters)
@@ -248,9 +249,15 @@ def heat_files_traversal(index, extra_files, services_and_files, hot_home, file_
         heat_file_processing(extra_files[index], extra_files, services_and_files, hot_home, file_resources,
                              heat_parameters)
 
-    if len(services_and_files.items()) <= index and len(file_resources.items()) <= index and len(extra_files) <= index:
+    if len(warning_resources.items()) > index:
+        heat_file_processing(list(warning_resources.items())[index][1], extra_files, services_and_files, hot_home,
+                             file_resources, heat_parameters)
+
+    if len(services_and_files.items()) <= index and len(file_resources.items()) <= index and len(extra_files) <= index\
+            and len(warning_resources.items()) <= index:
         return
-    heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
+    heat_files_traversal(index + 1, extra_files, services_and_files, hot_home, file_resources, heat_parameters,
+                         warning_resources)
 
 
 def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
@@ -275,7 +282,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
                                                                     services_and_files, copy_hot_home, all_services)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
                             other_resources, parameters_defaults, warning_resources)
-        heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters)
+        heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters,
+                             warning_resources)
         print(yaml.dump(parameters_defaults))
 
     else:
@@ -307,7 +315,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
 
         env_files_traversal(0, all_services, extra_files, services_and_files, hot_home, file_resources, other_resources,
                             parameters_defaults, warning_resources)
-        heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources, heat_parameters)
+        heat_files_traversal(0, extra_files, services_and_files, hot_home, file_resources, heat_parameters,
+                             warning_resources)
 
         for service, file_path in services_and_files.items():
             if os.path.isfile(os.path.join(hot_home, file_path)):
@@ -350,12 +359,12 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
             if parameter not in heat_parameters.keys():
                 print('Warning! This parameter is not defined in heat templates -', parameter)
 
-        # for parameter, value_param in heat_parameters.items():
-        #     if parameter not in parameters_defaults.keys() and value_param['default'] != '':
-        #         parameters_defaults.update({parameter: value_param['default']})
-        #     if parameter in parameters_defaults.keys():
-        #         if not parameter_type_checker(parameters_defaults[parameter], value_param['type']):
-        #             print('Value does not match the type. Check this parameter - ', parameter)
+        for parameter, value_param in heat_parameters.items():
+            if parameter not in parameters_defaults.keys() and value_param['default'] != '':
+                parameters_defaults.update({parameter: value_param['default']})
+            if parameter in parameters_defaults.keys():
+                if not parameter_type_checker(parameters_defaults[parameter], value_param['type']):
+                    print('Value does not match the type. Check this parameter - ', parameter)
 
         if parameters_flag:
             print('PARAMETERS')
