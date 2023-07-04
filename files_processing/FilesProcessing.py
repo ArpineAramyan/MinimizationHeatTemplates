@@ -1,4 +1,3 @@
-import json
 import yaml
 import flatdict
 import re
@@ -6,6 +5,7 @@ import os
 import pathlib
 from files_processing.normalized_rel_path import normalized_rel_path
 from files_processing.copy_file import copy_file
+from files_processing.type_checker import parameter_type_checker
 
 
 key_word_resources = 'resource_registry.*'
@@ -14,28 +14,6 @@ key_words_heat = '(.*get_file$|resources.*type$)'
 heat_file_header = '^heat_template_version'
 yaml_file_extension = '.*yaml$'
 parameters_extension = '^parameters.*'
-
-
-def is_json(myjson):
-    try:
-        json.loads(myjson)
-    except ValueError as e:
-        return False
-    return True
-
-
-def parameter_type_checker(parameter_value, parameter_type):
-    if parameter_type == 'json' and is_json(str(parameter_value)):
-        return True
-    if parameter_type == 'comma_delimited_list' and isinstance(parameter_value, list):
-        return True
-    if parameter_type == 'string' and isinstance(parameter_value, str):
-        return True
-    if parameter_type == 'number' and isinstance(parameter_value, int):
-        return True
-    if parameter_type == 'boolean' and isinstance(parameter_value, bool):
-        return True
-    return False
 
 
 # saving services that used in roles_data.yaml
@@ -85,7 +63,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
                             and value not in services_and_files.values() \
                             and key.split()[-1] not in all_services \
                             and value not in file_resources.values():
-                        print('Warning! This parameter is not defined in roles_data -', key.split()[-1])
+                        print('WARNING: This parameter is not defined in roles_data -', key.split()[-1])
                         warning_resources.update({key.split()[-1]: value})
 
     return file_resources, other_resources, warning_resources
@@ -136,7 +114,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                         if key_param not in parameters_defaults:
                             parameters_defaults.update({key_param: value_param})
                         else:
-                            print("Warning! Found parameter overwrite -", key_param)
+                            print('WARNING: Found parameter overwrite -', key_param)
             env_file_dict = flatdict.FlatterDict(env_file_data, delimiter=' - ')
             for key, value in env_file_dict.items():
                 is_heat = re.match(heat_file_header, key)
@@ -163,7 +141,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                                         and normalized not in services_and_files.values() \
                                         and key.split()[-1] not in all_services  \
                                         and normalized not in file_resources.values():
-                                    print('Warning! This parameter is not defined in roles_data -', key.split()[-1])
+                                    print('WARNING: This parameter is not defined in roles_data -', key.split()[-1])
                                     warning_resources.update({key.split()[-1]: normalized})
 
                                 elif not os.path.isfile(abs_value) and 'Services::' in value:
@@ -357,7 +335,7 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
 
         for parameter in parameters_defaults.keys():
             if parameter not in heat_parameters.keys():
-                print('Warning! This parameter is not defined in heat templates -', parameter)
+                print('WARNING: This parameter is not defined in heat templates -', parameter)
 
         for parameter, value_param in heat_parameters.items():
             if parameter not in parameters_defaults.keys() and value_param['default'] != '':
