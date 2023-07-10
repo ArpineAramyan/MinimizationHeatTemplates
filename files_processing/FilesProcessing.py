@@ -5,7 +5,7 @@ import os
 import pathlib
 from files_processing.normalized_rel_path import normalized_rel_path
 from files_processing.copy_file import copy_file
-from files_processing.type_checker import parameter_type_checker
+from files_processing.type_checker import parameters_type_checker
 
 
 key_word_resources = 'resource_registry.*'
@@ -26,6 +26,28 @@ def used_services(roles_data_path):
             if 'ServicesDefault' in key:
                 services = services + value
     return services
+
+
+def parameters_update(parameters_defaults):
+    prepare = parameters_defaults['ContainerImagePrepare'][0]['set']
+    if prepare['namespace'][-1] == '/':
+        changed_value0 = prepare['namespace'] + prepare['name_prefix']
+    else:
+        changed_value0 = prepare['namespace'] + '/' + prepare['name_prefix']
+    changed_value1 = ':' + prepare['tag']
+    image_extension = 'Container.*Image$'
+    docker_extension = 'docker.*'
+    for container in parameters_defaults.keys():
+        image_match = re.match(image_extension, container)
+        if image_match:
+            docker_match = re.match(docker_extension, parameters_defaults[container])
+            if docker_match:
+                name = parameters_defaults[container].split('/')[2].split(':')[0][14:]
+                parameters_defaults[container] = changed_value0 + name + changed_value1
+            else:
+                name = 'ceph-daemon'
+                parameters_defaults[container] = changed_value0[:36] + name + changed_value1
+                print(parameters_defaults[container])
 
 
 def overcloud_resource_registry_puppet_processing(extra_files, services_and_files, hot_home, all_services):
@@ -257,11 +279,25 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
         all_services = used_services(os.path.join(copy_hot_home, roles_data_path))
         plan_env_processing(plan_env_path, extra_files, services_and_files, copy_hot_home, parameters_defaults)
         file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
-                                                                    services_and_files, copy_hot_home, all_services)
+                                                                        services_and_files, copy_hot_home, all_services)
+        for each_file in file_resources.values():
+            heat_file_processing(each_file, extra_files, services_and_files, copy_hot_home, file_resources,
+                                 heat_parameters)
+        for file_path in services_and_files.values():
+            heat_file_processing(file_path, extra_files, services_and_files, copy_hot_home, file_resources,
+                                 heat_parameters)
+        for each_file in warning_resources.values():
+            heat_file_processing(each_file, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
                             other_resources, parameters_defaults, warning_resources)
         heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters,
                              warning_resources)
+        for parameter in parameters_defaults.keys():
+            if parameter not in heat_parameters.keys():
+                print('WARNING: This parameter is not defined in heat templates -', parameter)
+        parameters_update(parameters_defaults)
+        parameters_type_checker(parameters_defaults, heat_parameters)
+        print('PARAMETERS')
         print(yaml.dump(parameters_defaults))
 
     else:
@@ -337,12 +373,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
             if parameter not in heat_parameters.keys():
                 print('WARNING: This parameter is not defined in heat templates -', parameter)
 
-        for parameter, value_param in heat_parameters.items():
-            if parameter not in parameters_defaults.keys() and value_param['default'] != '':
-                parameters_defaults.update({parameter: value_param['default']})
-            if parameter in parameters_defaults.keys():
-                if not parameter_type_checker(parameters_defaults[parameter], value_param['type']):
-                    print('Value does not match the type. Check this parameter - ', parameter)
+        parameters_update(parameters_defaults)
+        parameters_type_checker(parameters_defaults, heat_parameters)
 
         if parameters_flag:
             print('PARAMETERS')
