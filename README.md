@@ -29,6 +29,7 @@ pip install -r requirements.txt
 ```commandline
 python3 setup.py install
 ```
+## Использование программы
 Теперь с помощью команды ***minheat*** запускается работа программы. 
 Для ознакомления с информацией о входных данных можно вызвать `help`:
 ```commandline
