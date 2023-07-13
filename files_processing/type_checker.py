@@ -10,15 +10,20 @@ def is_json(myjson):
 
 
 def type_checker(parameter_value, parameter_type):
+    bools = ['t', 'true', 'on', 'y', 'yes', '1', 'f', 'false', 'off', 'n', 'no', '0']
+    # dict?
     if parameter_type == 'json' and is_json(str(parameter_value)):
         return True
-    if parameter_type == 'comma_delimited_list' and isinstance(parameter_value, list):
-        return True
+    if parameter_type == 'comma_delimited_list':
+        if isinstance(parameter_value, str) and len(parameter_value.split(',')) > 1:
+            return True
+        if isinstance(parameter_value, list):
+            return True
     if parameter_type == 'string' and isinstance(parameter_value, str):
         return True
-    if parameter_type == 'number' and isinstance(parameter_value, int):
+    if parameter_type == 'number' and (isinstance(parameter_value, int) or isinstance(parameter_value, float)):
         return True
-    if parameter_type == 'boolean' and isinstance(parameter_value, bool):
+    if parameter_type == 'boolean' and (isinstance(parameter_value, bool) or parameter_value in bools):
         return True
     return False
 

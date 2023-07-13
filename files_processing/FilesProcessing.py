@@ -47,7 +47,6 @@ def parameters_update(parameters_defaults):
             else:
                 name = 'ceph-daemon'
                 parameters_defaults[container] = changed_value0[:36] + name + changed_value1
-                print(parameters_defaults[container])
 
 
 def overcloud_resource_registry_puppet_processing(extra_files, services_and_files, hot_home, all_services):
@@ -287,7 +286,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
             heat_file_processing(file_path, extra_files, services_and_files, copy_hot_home, file_resources,
                                  heat_parameters)
         for each_file in warning_resources.values():
-            heat_file_processing(each_file, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters)
+            heat_file_processing(each_file, extra_files, services_and_files, copy_hot_home, file_resources,
+                                 heat_parameters)
         env_files_traversal(0, all_services, extra_files, services_and_files, copy_hot_home, file_resources,
                             other_resources, parameters_defaults, warning_resources)
         heat_files_traversal(0, extra_files, services_and_files, copy_hot_home, file_resources, heat_parameters,
