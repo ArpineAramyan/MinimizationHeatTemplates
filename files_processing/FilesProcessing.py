@@ -1,8 +1,10 @@
-import yaml
-import flatdict
 import re
 import os
 import pathlib
+
+import yaml
+import flatdict
+
 from files_processing.normalized_rel_path import normalized_rel_path
 from files_processing.copy_file import copy_file
 from files_processing.type_checker import parameters_type_checker
@@ -64,8 +66,7 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
         resources_match = re.match(key_word_resources, key)
         if resources_match:
             if 'Services::' not in key:
-                if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
-                        and value not in services_and_files.values() and value not in file_resources.values():
+                if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files:
                     file_resources.update({key.split()[-1]: value})
                 elif not os.path.isfile(os.path.join(hot_home, value)) and 'None' not in value:
                     other_resources.update({key.split()[-1]: value})
@@ -74,16 +75,12 @@ def overcloud_resource_registry_puppet_processing(extra_files, services_and_file
                     services_and_files.pop(key.split()[-1], 1)
                 else:
                     if os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
-                            and value not in services_and_files.values() \
-                            and key.split()[-1] in all_services \
-                            and value not in file_resources.values():
+                            and key.split()[-1] in all_services:
                         services_and_files.update({key.split()[-1]: value})
                     elif not os.path.isfile(os.path.join(hot_home, value)) and 'Services::' in value:
                         all_services.append(value)
                     elif os.path.isfile(os.path.join(hot_home, value)) and value not in extra_files \
-                            and value not in services_and_files.values() \
-                            and key.split()[-1] not in all_services \
-                            and value not in file_resources.values():
+                            and key.split()[-1] not in all_services:
                         print('WARNING: This parameter is not defined in roles_data -', key.split()[-1])
                         warning_resources.update({key.split()[-1]: value})
 
@@ -154,14 +151,10 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                                 services_and_files.pop(key.split()[-1], 1)
                             else:
                                 if os.path.isfile(abs_value) and normalized not in extra_files \
-                                        and normalized not in services_and_files.values() \
-                                        and key.split()[-1] in all_services  \
-                                        and normalized not in file_resources.values():
+                                        and key.split()[-1] in all_services:
                                     services_and_files.update({key.split()[-1]: normalized})
                                 elif os.path.isfile(abs_value) and normalized not in extra_files \
-                                        and normalized not in services_and_files.values() \
-                                        and key.split()[-1] not in all_services  \
-                                        and normalized not in file_resources.values():
+                                        and key.split()[-1] not in all_services:
                                     print('WARNING: This parameter is not defined in roles_data -', key.split()[-1])
                                     warning_resources.update({key.split()[-1]: normalized})
 
@@ -173,9 +166,7 @@ def env_file_processing(env_file, all_services, extra_files, services_and_files,
                                 file_resources.pop(key.split()[-1], 1)
                                 other_resources.pop(key.split()[-1], 1)
                             else:
-                                if os.path.isfile(abs_value) and normalized not in extra_files \
-                                    and normalized not in services_and_files.values() \
-                                        and normalized not in file_resources.values():
+                                if os.path.isfile(abs_value) and normalized not in extra_files:
                                     file_resources.update({key.split()[-1]: normalized})
                                 elif not os.path.isfile(abs_value):
                                     other_resources.update({key.split()[-1]: value})
@@ -277,8 +268,8 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
     if param_only:
         all_services = used_services(os.path.join(copy_hot_home, roles_data_path))
         plan_env_processing(plan_env_path, extra_files, services_and_files, copy_hot_home, parameters_defaults)
-        file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
-                                                                        services_and_files, copy_hot_home, all_services)
+        file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(
+            extra_files, services_and_files, copy_hot_home, all_services)
         for each_file in file_resources.values():
             heat_file_processing(each_file, extra_files, services_and_files, copy_hot_home, file_resources,
                                  heat_parameters)
@@ -304,8 +295,9 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
         all_services = used_services(os.path.join(hot_home, roles_data_path))
         plan_env_processing(plan_env_path, extra_files, services_and_files, hot_home, parameters_defaults)
         # in key resource type, in value file path
-        file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(extra_files,
-                                                            services_and_files, hot_home, all_services)
+        file_resources, other_resources, warning_resources = overcloud_resource_registry_puppet_processing(
+            extra_files, services_and_files, hot_home, all_services)
+
         for each_file in file_resources.values():
             path, file = os.path.split(each_file)
             path_parts = pathlib.PosixPath(path)
@@ -383,7 +375,6 @@ def main(hot_home,  copy_hot_home, roles_data_path, plan_env_path, network_data,
         if services_flag:
             print('SERVICES')
             print(yaml.dump(services_and_files))
-            print(yaml.dump(warning_resources))
 
         if not_templates_flag:
             print('NOT TEMPLATES')
